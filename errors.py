@@ -20,5 +20,7 @@ class TargetFound(Exception):
     Exception thrown when the target number is found.
     """
     
-    def __init__(self, path):
+    def __init__(self, target, path, uses):
+        self.target = target
         self.path = path
+        self.uses = uses

@@ -15,10 +15,10 @@ MAX_POW = 140 * 140 # prevent a^b if a*b > 140*140
 # Prevent program breaking due to excessive recursion.
 MAX_REC = 10000 
 # Prevent program breaking by storing excessivly large numbers.
-TOO_BIG = 999999999999999999999999 
+TOO_BIG = pow(10,24) #999999999999999999999999 
 
 # The target number to compute.
-TARGET = -1
+TARGETS = [-1]
 # The number to use to compute the target number.
 USE = -1
 

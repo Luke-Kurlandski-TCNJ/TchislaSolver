@@ -1,6 +1,6 @@
 from itertools import product, combinations_with_replacement
 
-from exceptions import NumberError, TargetFound
+from errors import NumberError, TargetFound
 import configs
 import functions
 
@@ -33,8 +33,10 @@ def check_target(n, path):
         path : str : operations taken to arrive at n
     """
     
-    if n == configs.TARGET:
-        raise TargetFound(path)
+    for i in configs.TARGETS:
+        if n == i:
+            configs.TARGETS.remove(n)
+            raise TargetFound(i, path, path.count(str(configs.USE)))
         
 def subset_sum(numbers, target):
     """
@@ -59,6 +61,8 @@ def calculate_uniary(n, x_uses, path, rdepth=1):
         rdepth : int :  recursive depth of the function
     """
     
+    retVal = []
+
     # Perform each single operator on n.
     for op in configs.uniary_ops:
         # Avoid a recursion error
@@ -79,9 +83,19 @@ def calculate_uniary(n, x_uses, path, rdepth=1):
                 else:
                     x_uses[res] = "(" + sym + path + ")"
                     calculate_uniary(res, x_uses, x_uses[res], rdepth+1)
-                check_target(res, x_uses[res])
+                try:
+                    check_target(res, x_uses[res])
+                except TargetFound as e:
+                    retVal.append((e.target, e.path, e.uses))
+
         except NumberError:
             continue
+
+    # If retVal is empty, return None.
+    if retVal:
+        return retVal
+    else:
+        return None
 
 def perform_uniary_operations(x_uses):
     """
@@ -91,8 +105,18 @@ def perform_uniary_operations(x_uses):
         x_uses : dict : results that requires x uses of USE
     """
 
+    retVal = []
+
     for n in list(x_uses):
-        calculate_uniary(n, x_uses, x_uses[n])
+        discovered = calculate_uniary(n, x_uses, x_uses[n])
+        if discovered is not None:
+            retVal.extend(discovered)
+
+    # If retVal is empty, return None.
+    if retVal:
+        return retVal
+    else:
+        return None
 
 def calculate_nthles(nums_pairs, x_uses):
     """
@@ -104,6 +128,8 @@ def calculate_nthles(nums_pairs, x_uses):
             combine with binary operators
         x_uses : dict : results that requires x uses of USE to fill
     """
+
+    retVal = []
 
     # Cycle through the list of tuples.
     for p in nums_pairs:
@@ -128,7 +154,10 @@ def calculate_nthles(nums_pairs, x_uses):
                     res = op(num1, num2)
                     if res not in x_uses: 
                         x_uses[res] = "(" + path1 + sym + path2 + ")"
+                    try:
                         check_target(res, x_uses[res])
+                    except TargetFound as e:
+                        retVal.append((e.target, e.path, e.uses))
                 except (OverflowError, ValueError, NumberError):
                     pass
                 # Calculate and add num2 op num1 to the dict.
@@ -136,43 +165,56 @@ def calculate_nthles(nums_pairs, x_uses):
                     res = op(num2, num1)
                     if res not in x_uses: 
                         x_uses[res] = "(" + path2 + sym + path1 + ")"
-                        check_target(res, x_uses[res])
+                        try:
+                            check_target(res, x_uses[res])
+                        except TargetFound as e:
+                            retVal.append((e.target, e.path, e.uses))
+
                 except (OverflowError, ValueError, NumberError):
                     pass
 
-def calculate(TARGET, USE):
+    # If retVal is empty, return None.
+    if retVal:
+        return retVal
+    else:
+        return None
+
+def calculate(use, targets):
     """
     Calculate the TAGRET number with as few uses of the USE number as possible.
     """
     
     # Establish the global USE and TARGET variables.
-    configs.TARGET = TARGET
-    configs.USE = USE
+    configs.USE = int(use)
+    #targets = [int(targets)]
+    targets = list(map(int, targets.split(",")))
+    configs.TARGETS = targets
     # Store all dictionaries containing num:path relationships.
     nums = ["NULL"]
-    # An exception will be raised if the number is found.
-    try:
-        i = 1
-        while True:
-            # Dictionary stores numbers of path length i as num:path pairs.
-            nums.append({int(str(configs.USE) * i): str(configs.USE) * i})
-            # Combine the dictionaries with shorter paths to find more numbers.
-            if i > 1:
-                nums_pairs = []
-                # Find which dictionaries to combine to add to i.
-                for pair in subset_sum(range(1,i), i):
-                    nums_pairs.append((nums[pair[0]], nums[pair[1]]))
-                # Calculate numbers formed by path length i.
-                calculate_nthles(nums_pairs, nums[i])
-            # Perform uniary operations on numbers of path length i.
-            perform_uniary_operations(nums[i])
-            # Increment to find numbers of next path length.
-            i += 1
-    # Stop process if number was found.
-    except TargetFound as e:
-        uses = e.path.count(str(configs.USE))
-        print(str(configs.TARGET) + " Found With " + str(uses) + " " + str(configs.USE) + "'s")
-        print(str(configs.TARGET) + " = " + e.path + "\n")
+    #list of tuples with (TARGET, path, numUses)
+    retVal = [] 
+    i = 1
+    while configs.TARGETS:
+        # Dictionary stores numbers of path length i as num:path pairs.
+        nums.append({int(str(configs.USE) * i): str(configs.USE) * i})
+        # Combine the dictionaries with shorter paths to find more numbers.
+        if i > 1:
+            nums_pairs = []
+            # Find which dictionaries to combine to add to i.
+            for pair in subset_sum(range(1,i), i):
+                nums_pairs.append((nums[pair[0]], nums[pair[1]]))
+            # Calculate numbers formed by path length i.
+            discovered = calculate_nthles(nums_pairs, nums[i])
+            if discovered is not None:
+                retVal.extend(discovered)
+        # Perform uniary operations on numbers of path length i.
+        discovered = perform_uniary_operations(nums[i])
+        if discovered is not None:
+            retVal.extend(discovered)
+        # Increment to find numbers of next path length.
+        i += 1
+        
+    return retVal #list of tuples with (TARGET, path, numUses)
 
 
 

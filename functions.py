@@ -10,7 +10,7 @@ Contains functions for computing results of mathematical operations Tchisla uses
 
 import math
 import configs
-from exceptions import NumberError
+from errors import NumberError
 
 def factorial(n):
     """
