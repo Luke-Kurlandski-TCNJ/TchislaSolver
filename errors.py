@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Luke Kurlandski
-February 2020
 Tchisla Solver Exceptions
+Spring 2020
 
 Contains basic exceptions that may occur during the course of solving Tchisla.
 """

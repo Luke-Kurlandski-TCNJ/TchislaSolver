@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Luke Kurlandski
-February 2020
-Tchisla Solver Run File
+Tchisla Solver Manual Run
+Spring 2020
 
 User runs to solve a Tchisla puzzle.
 """
@@ -27,8 +25,12 @@ def command_line_runner():
         tchisla.calculate(TARGET, USE)
     print("\nHope you enjoyed cheating at Tchisla!")
 
-def alt_runner():
-    print(tchisla.calculate(4, "3"))
+def alt_runner1():
+    for i in range(1, 10):
+        print(tchisla.calculate(i, "100,101,102,103,104,105,106,107,108,109", 10000, 20000, 20000, 24),"\n\n\n")
 
-alt_runner()
+def alt_runner2():
+    print(tchisla.calculate(8, "100", 10000, 20000, 20000, 24))
+
+alt_runner1()
 

@@ -1,30 +1,178 @@
+"""
+Luke Kurlandski
+Tchisla Solver Back-End
+Spring 2020
+"""
+
+import math
+import time
 from itertools import product, combinations_with_replacement
 
 from errors import NumberError, TargetFound
-import configs
-import functions
 
-def nice_print(nums):
+class Operation:
+    """
+    Contains functions for computing results of mathematical operations Tchisla uses.
+    
+    Should have been in separte file, but R was making importation of files tricky.
+    """
+    
+    def __init__(self, use, targets, max_fact, max_pow, max_rec, too_big):
+        
+        # Numbers to search for and number to use.
+        self.USE = use
+        self.TARGETS = targets
+        
+        	# Prevent program breaking due to large numbers.
+        self.MAX_FACT = int(max_fact) #20000
+        self.MAX_POW = int(max_pow) #140*140
+        self.MAX_REC = int(max_rec) #10000
+        self.TOO_BIG = pow(10, too_big) #10^24
+        
+        # Store the permitted operations in a list.
+        self.uniary_ops = [self.factorial, self.negation, self.root]
+        self.binary_ops = [self.addition, self.subtraction, self.multiplication, 
+                      self.division, self.exponentiation]
+
+    def factorial(self, n):
+        """
+        Compute and return the factorial of n, raise NumberError as needed.
+        """
+        
+        if n > self.MAX_FACT or n < 3:
+            raise NumberError
+        r = math.factorial(n)
+        if r > self.TOO_BIG:
+            raise NumberError
+        return int(r)
+    
+    def negation(self, n):
+        """
+        Compute and return the negation of n, raise NumberError as needed.
+        """
+        
+        r = -1 * n
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG):
+            raise NumberError
+        return int(r)
+    
+    def root(self, n):
+        """
+        Compute and return the negation of n, raise NumberError as needed.
+        """
+        
+        if  n < 2:
+            raise NumberError
+        r = math.sqrt(n)
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG) or not r.is_integer():
+            raise NumberError
+        return int(r)
+    
+    def addition(self, n, m):
+        """
+        Compute and return the sum of n and m, raise NumberError as needed.
+        """
+        
+        r = m + n
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG):
+            raise NumberError
+        return int(r)
+    
+    def subtraction(self, n, m):
+        """
+        Compute and return the difference of n and m, raise NumberError as needed.
+        """
+        
+        r = n - m
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG):
+            raise NumberError
+        return int(r)
+    
+    def multiplication(self, n, m):
+        """
+        Compute and return the product of n and m, raise NumberError as needed.
+        """
+        
+        r = m * n
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG):
+            raise NumberError
+        return int(r)
+    
+    def division(self, n, m):
+        """
+        Compute and return the quotient of n and m, raise NumberError as needed.
+        """
+    
+        if m == 0:
+            raise NumberError
+        r = n / m
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG) or not r.is_integer():
+            raise NumberError
+        return int(r)
+    
+    def exponentiation(self, n, m):
+        """
+        Compute and return n to the power of m, raise NumberError as needed.
+        """
+        
+        if n * m > self.MAX_POW:
+            raise NumberError
+        r = math.pow(n, m)
+        if r > self.TOO_BIG or r < (-1*self.TOO_BIG) or not r.is_integer():
+            raise NumberError
+        return int(r)
+    
+    def symbol(self, name):
+        """
+        Return the appropriate mathematical symbol for a function name.
+        """
+    
+        if name == "factorial":
+            return "!"
+        if name == "root":
+            return "sq"
+        if name == "negation":
+            return "-"
+        if name == "addition":
+            return "+"
+        if name == "subtraction":
+            return "-"
+        if name == "multiplication":
+            return "*"
+        if name == "division":
+            return "/"
+        if name == "exponentiation":
+            return "^"
+
+def nice_print(nums, m:Operation):
     """
     Neatly print a dictionary of result:path pairs for testing purposes. 
     """
     
     for i in range(1, len(nums)):
-        print("\nUsed " + str(configs.USE) + ", " + str(i) + " times:\n")
+        print("\nUsed " + str(m.USE) + ", " + str(i) + " times:\n")
         for res in sorted(nums[i].keys()):
             print(int(res), "=", nums[i][res])
             
-def total_report(nums):
+def total_report(nums, m:Operation):
     """
     Print a report of all numbers generated for testing purposes.
     """
     
     print("\nTotal Report:")
     for i in nums:
-        print("Numbers Produced With " + str(i) + ", " + str(configs.USE) + "s:", len(nums[i].keys()))
+        print("Numbers Produced With " + str(i) + ", " + str(m.USE) + "s:", len(nums[i].keys()))
     print()
+    
+def sort_tuple(tup_list):
+    """
+    Sort the list of tuples produced in calculate method.
+    """
+    
+    tup_list.sort(key = lambda x: x[0])  
+    return tup_list 
         
-def check_target(n, path):
+def check_target(n, path, m:Operation):
     """
     Check if the target is found and print result.
     
@@ -33,10 +181,10 @@ def check_target(n, path):
         path : str : operations taken to arrive at n
     """
     
-    for i in configs.TARGETS:
+    for i in m.TARGETS:
         if n == i:
-            configs.TARGETS.remove(n)
-            raise TargetFound(i, path, path.count(str(configs.USE)))
+            m.TARGETS.remove(n)
+            raise TargetFound(i, path, path.count(str(m.USE)))
         
 def subset_sum(numbers, target):
     """
@@ -50,7 +198,7 @@ def subset_sum(numbers, target):
             pairs.append(i)
     return pairs
 
-def calculate_uniary(n, x_uses, path, rdepth=1):
+def calculate_uniary(n, x_uses, path, m:Operation, rdepth=1):
     """
     Fill x_uses with the results of using uniary operators on the number n.
     
@@ -64,27 +212,25 @@ def calculate_uniary(n, x_uses, path, rdepth=1):
     retVal = []
 
     # Perform each single operator on n.
-    for op in configs.uniary_ops:
+    for op in m.uniary_ops:
         # Avoid a recursion error
-        if rdepth > configs.MAX_REC:
-            return 
+        if rdepth > m.MAX_REC:
+            return
         # Avoid repetative switching sign.
         if op.__name__ == "neg" and len(path) > 1 and path[1] == "-":
             continue 
         # Calculate the result and perform recursion on result.
-        sym = functions.symbol(op.__name__)
+        sym = m.symbol(op.__name__)
         try:
             res = op(n)
             if res not in x_uses:
                 # Place minus sign/sqr in front, factorial behind
-                if sym == "!":
-                    x_uses[res] = "(" + path + sym + ")"
-                    calculate_uniary(res, x_uses, x_uses[res], rdepth+1)
-                else:
-                    x_uses[res] = "(" + sym + path + ")"
-                    calculate_uniary(res, x_uses, x_uses[res], rdepth+1)
+                x_uses[res] = "(" + path + sym + ")" if sym == "!" else "(" + sym + path + ")"
+                discovered = calculate_uniary(res, x_uses, x_uses[res], m, rdepth+1)
+                if discovered:
+                    retVal.extend(discovered)
                 try:
-                    check_target(res, x_uses[res])
+                    check_target(res, x_uses[res], m)
                 except TargetFound as e:
                     retVal.append((e.target, e.path, e.uses))
 
@@ -97,7 +243,7 @@ def calculate_uniary(n, x_uses, path, rdepth=1):
     else:
         return None
 
-def perform_uniary_operations(x_uses):
+def perform_uniary_operations(x_uses, m):
     """
     Perform all uniary operations on every number in x_uses.
     
@@ -108,7 +254,7 @@ def perform_uniary_operations(x_uses):
     retVal = []
 
     for n in list(x_uses):
-        discovered = calculate_uniary(n, x_uses, x_uses[n])
+        discovered = calculate_uniary(n, x_uses, x_uses[n], m)
         if discovered is not None:
             retVal.extend(discovered)
 
@@ -118,7 +264,7 @@ def perform_uniary_operations(x_uses):
     else:
         return None
 
-def calculate_nthles(nums_pairs, x_uses):
+def calculate_nthles(nums_pairs, x_uses, m:Operation):
     """
     Fill x_uses with results taking x operations by performing operations with
         the values from nums_pairs.
@@ -144,9 +290,9 @@ def calculate_nthles(nums_pairs, x_uses):
             num1 = combo[0]
             num2 = combo[1]
             # Perform every double op available between the numbers.
-            for op in configs.binary_ops:
+            for op in m.binary_ops:
                 # Get the operation symbol and paths for each num.
-                sym = functions.symbol(op.__name__)
+                sym = m.symbol(op.__name__)
                 path1 = nums1[num1]
                 path2 = nums2[num2]
                 # Calculate and add num1 op num2 to the dict.
@@ -155,7 +301,7 @@ def calculate_nthles(nums_pairs, x_uses):
                     if res not in x_uses: 
                         x_uses[res] = "(" + path1 + sym + path2 + ")"
                     try:
-                        check_target(res, x_uses[res])
+                        check_target(res, x_uses[res], m)
                     except TargetFound as e:
                         retVal.append((e.target, e.path, e.uses))
                 except (OverflowError, ValueError, NumberError):
@@ -166,7 +312,7 @@ def calculate_nthles(nums_pairs, x_uses):
                     if res not in x_uses: 
                         x_uses[res] = "(" + path2 + sym + path1 + ")"
                         try:
-                            check_target(res, x_uses[res])
+                            check_target(res, x_uses[res], m)
                         except TargetFound as e:
                             retVal.append((e.target, e.path, e.uses))
 
@@ -179,24 +325,23 @@ def calculate_nthles(nums_pairs, x_uses):
     else:
         return None
 
-def calculate(use, targets):
+def calculate(use, targets, max_fact, max_pow, max_rec, too_big):
     """
     Calculate the TAGRET number with as few uses of the USE number as possible.
     """
     
-    # Establish the global USE and TARGET variables.
-    configs.USE = int(use)
-    #targets = [int(targets)]
-    targets = list(map(int, targets.split(",")))
-    configs.TARGETS = targets
+    m = Operation(
+            use=int(use), targets=list(map(int, targets.split(","))),
+            max_fact=max_fact, max_pow=max_pow, max_rec=max_rec, too_big=too_big)
+    
     # Store all dictionaries containing num:path relationships.
     nums = ["NULL"]
     #list of tuples with (TARGET, path, numUses)
     retVal = [] 
     i = 1
-    while configs.TARGETS:
+    while m.TARGETS:
         # Dictionary stores numbers of path length i as num:path pairs.
-        nums.append({int(str(configs.USE) * i): str(configs.USE) * i})
+        nums.append({int(str(m.USE) * i): str(m.USE) * i})
         # Combine the dictionaries with shorter paths to find more numbers.
         if i > 1:
             nums_pairs = []
@@ -204,17 +349,15 @@ def calculate(use, targets):
             for pair in subset_sum(range(1,i), i):
                 nums_pairs.append((nums[pair[0]], nums[pair[1]]))
             # Calculate numbers formed by path length i.
-            discovered = calculate_nthles(nums_pairs, nums[i])
-            if discovered is not None:
+            discovered = calculate_nthles(nums_pairs, nums[i], m)
+            if discovered:
                 retVal.extend(discovered)
         # Perform uniary operations on numbers of path length i.
-        discovered = perform_uniary_operations(nums[i])
-        if discovered is not None:
+        discovered = perform_uniary_operations(nums[i], m)
+        if discovered:
             retVal.extend(discovered)
         # Increment to find numbers of next path length.
         i += 1
-        
-    return retVal #list of tuples with (TARGET, path, numUses)
-
-
+    
+    return sort_tuple(retVal)
 
